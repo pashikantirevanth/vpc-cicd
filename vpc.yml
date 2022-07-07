@@ -116,7 +116,7 @@ Resources:
       VpcId: !Ref myVPC               
       Tags: 
         - Key: Name
-          Value: PublicRT
+          Value: !Sub "${AWS::StackName}-PublicRT"
         - Key: Network
           Value: Public 
 
@@ -126,7 +126,7 @@ Resources:
       VpcId: !Ref myVPC               
       Tags: 
         - Key: Name
-          Value: PrivateRT
+          Value: !Sub "${AWS::StackName}-PrivateRT"
         - Key: Network
           Value: Private          
 
@@ -159,8 +159,8 @@ Resources:
     Properties:
       Tags:
         - Key: Name
-          Value: VPC-IGW
-    
+          Value: !Sub "${AWS::StackName}-IGW"
+
   VPCGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
