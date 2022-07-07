@@ -1,0 +1,197 @@
+#https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/AWS_EC2.html
+AWSTemplateFormatVersion: '2010-09-09'
+Description: VPC Nested Stack Template
+
+Parameters:
+  VpcBlock:
+    Type: String
+    #Default: 10.0.0.0/16
+    Description: VPC CIDR Tange
+      
+  PublicSubnet01Block:
+    Type: String
+    #Default: 10.0.1.0/24
+    Description: CidrBlock for Public Subnet 01 within the VPC.  
+
+  PublicSubnet02Block:
+    Type: String
+    #Default: 10.0.2.0/24
+    Description: CidrBlock for Public Subnet 02 within the VPC    
+
+  PrivateSubnet01Block:
+    Type: String
+    #Default: 10.0.3.0/24
+    Description: CidrBlock for Private Subnet 01 within the VPC
+
+  PrivateSubnet02Block:
+    Type: String
+    #Default: 10.0.4.0/24
+    Description: CidrBlock for Private Subnet 02 within the VPC  
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      - Label:
+          default: Dev VPC Network Configuration
+          Parameters:
+            - VpcBlock
+            - PublicSubnet01Block
+            - PublicSubnet02Block
+            - PrivateSubnet01Block
+            - PrivateSubnet02Block     
+    ParameterLabels:
+      VpcBlock:
+        default: VPC CIDR Range selection                        
+
+Resources:
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcBlock
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-myVPC"
+
+  PublicSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PublicSubnet01Block 
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-PublicSubnet01"    
+      AvailabilityZone: 
+        Fn::Select:
+          - '0'
+          - Fn::GetAZs:
+              Ref: AWS::Region
+    
+  PublicSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PublicSubnet02Block 
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-PublicSubnet02"    
+      AvailabilityZone: 
+        Fn::Select:
+          - '1'
+          - Fn::GetAZs:
+              Ref: AWS::Region
+
+  PrivateSubnet01:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PrivateSubnet01Block 
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-PrivateSubnet01"    
+      AvailabilityZone: 
+        Fn::Select:
+          - '0'
+          - Fn::GetAZs:
+              Ref: AWS::Region
+
+  PrivateSubnet02:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: !Ref PrivateSubnet02Block 
+      Tags:
+        - Key: Name
+          Value: !Sub "${AWS::StackName}-PrivateSubnet02"    
+      AvailabilityZone: 
+        Fn::Select:
+          - '1'
+          - Fn::GetAZs:
+              Ref: AWS::Region
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC               
+      Tags: 
+        - Key: Name
+          Value: PublicRT
+        - Key: Network
+          Value: Public 
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC               
+      Tags: 
+        - Key: Name
+          Value: PrivateRT
+        - Key: Network
+          Value: Private          
+
+  PublicSubnet01RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet01
+      RouteTableId: !Ref PublicRouteTable
+
+  PublicSubnet02RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet02
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet01RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet01
+      RouteTableId: !Ref PrivateRouteTable
+  
+  PrivateSubnet02RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet02
+      RouteTableId: !Ref PrivateRouteTable
+      
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: VPC-IGW
+    
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref InternetGateway
+      VpcId: !Ref myVPC    
+
+  Route: 
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable  
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref InternetGateway    
+
+Outputs:
+  PublicSubnet01Id:
+    Description: Public Subnet 01 Id
+    Value: !Ref PublicSubnet01
+
+  PublicSubnet02Id:
+    Description: Public subnet 02 Id
+    Value: !Ref PublicSubnet02
+  
+  PrivateSubnet01Id:
+    Description: Private Subnet 01 Id
+    Value: !Ref PrivateSubnet01
+  
+  PrivateSubnet02Id:
+    Description: Private Subnet 02 Id
+    Value: !Ref PrivateSubnet02
+
+  VpcId:
+    Description: Vpc Id
+    Value: !Ref myVPC      
